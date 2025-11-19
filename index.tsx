@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as THREE from 'three';
@@ -303,6 +304,28 @@ const ThreeScene: React.FC<{
 
   const animationState = useRef<{ type: string, startTime: number }>({ type: 'idle', startTime: 0 });
 
+  // Procedural Texture for Peanut
+  const createPeanutTexture = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      if(ctx) {
+          ctx.fillStyle = '#E5C687';
+          ctx.fillRect(0, 0, 256, 256);
+          for(let i=0; i<5000; i++) {
+              const x = Math.random() * 256;
+              const y = Math.random() * 256;
+              const size = Math.random() * 2 + 1;
+              ctx.fillStyle = `rgba(160, 120, 60, ${Math.random() * 0.1 + 0.05})`;
+              ctx.beginPath();
+              ctx.arc(x, y, size, 0, Math.PI*2);
+              ctx.fill();
+          }
+      }
+      return new THREE.CanvasTexture(canvas);
+  };
+
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -378,22 +401,25 @@ const ThreeScene: React.FC<{
 
     // --- PEANUT ON HEAD ---
     const peanutGroup = new THREE.Group();
+    const peanutTex = createPeanutTexture();
     const peanutMat = new THREE.MeshStandardMaterial({ 
         color: 0xE5C687, // Peanut shell color
-        roughness: 0.9,
-        bumpScale: 0.05
+        roughness: 1.0,
+        bumpMap: peanutTex,
+        bumpScale: 0.05,
     });
     
     // Create a distinct "figure-8" peanut shape
-    const pBottomGeo = new THREE.SphereGeometry(0.1, 16, 16);
+    const pBottomGeo = new THREE.SphereGeometry(0.1, 32, 32); // Higher poly for texture
     const pBottom = new THREE.Mesh(pBottomGeo, peanutMat);
-    pBottom.scale.set(1, 1.1, 1);
+    pBottom.scale.set(1, 1.2, 1);
     
-    const pTopGeo = new THREE.SphereGeometry(0.08, 16, 16);
+    const pTopGeo = new THREE.SphereGeometry(0.08, 32, 32);
     const pTop = new THREE.Mesh(pTopGeo, peanutMat);
-    pTop.scale.set(1, 1.1, 1);
-    pTop.position.y = 0.14;
+    pTop.scale.set(1, 1.15, 1);
+    pTop.position.y = 0.15;
     pTop.position.x = 0.02; // slight slight angle
+    pTop.rotation.z = -0.1;
 
     peanutGroup.add(pBottom, pTop);
     
@@ -628,14 +654,14 @@ const SchoolCard: React.FC<{
   onSelect: () => void; 
   onDetail: () => void;
 }> = ({ school, selected, onSelect, onDetail }) => (
-    <div style={styles.schoolCard(selected)} onClick={onDetail}>
+    <div style={styles.schoolCard(selected)} onClick={onDetail} className="fade-in">
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'start'}}>
             <span style={{fontSize:'2.5rem'}}>{school.icon}</span>
             <input 
                 type="checkbox" 
                 checked={selected} 
                 onClick={(e) => { e.stopPropagation(); onSelect(); }}
-                style={{width:'20px', height:'20px', cursor:'pointer'}}
+                style={{width:'20px', height:'20px', cursor:'pointer', accentColor:'#f87171'}}
             />
         </div>
         <div style={{color:'#e2e8f0', fontWeight:'bold', fontSize:'1.1rem'}}>{school.name}</div>
@@ -748,7 +774,8 @@ const App: React.FC = () => {
 
         {toastMsg && <div style={{
             position: 'absolute', top: '15%', left: '50%', transform: 'translateX(-50%)',
-            background: '#f87171', padding: '10px 20px', borderRadius: '20px', color:'white'
+            background: '#f87171', padding: '10px 20px', borderRadius: '20px', color:'white',
+            boxShadow: '0 10px 20px rgba(0,0,0,0.2)', zIndex: 200
         }}>{toastMsg}</div>}
 
         {/* SCHOOL SEARCH */}
@@ -773,7 +800,7 @@ const App: React.FC = () => {
             <h2 style={{fontSize:'2rem', color:'white'}}>全流程服务</h2>
             <div style={{marginTop:'2rem', display:'flex', flexDirection:'column', gap:'1.5rem'}}>
                 {PROCESS_STEPS.map((step, i) => (
-                    <div key={i} style={{background:'rgba(255,255,255,0.05)', padding:'1.5rem', borderRadius:'12px'}}>
+                    <div key={i} className="fade-in" style={{animationDelay:`${i*0.1}s`, background:'rgba(255,255,255,0.05)', padding:'1.5rem', borderRadius:'12px'}}>
                         <div style={{color:'#fca5a5', fontSize:'1.2rem', fontWeight:'bold'}}>{step.title}</div>
                         <div style={{color:'#cbd5e1'}}>{step.desc}</div>
                     </div>
@@ -785,7 +812,7 @@ const App: React.FC = () => {
              <h2 style={{fontSize:'2rem', color:'white'}}>尊享留学套餐</h2>
              <div style={styles.grid}>
                  {PACKAGES.map((pkg, i) => (
-                     <div key={i} style={{background:'rgba(255,255,255,0.05)', padding:'2rem', borderRadius:'16px', textAlign:'center', border:'1px solid rgba(255,255,255,0.1)'}}>
+                     <div key={i} className="fade-in" style={{animationDelay:`${i*0.1}s`, background:'rgba(255,255,255,0.05)', padding:'2rem', borderRadius:'16px', textAlign:'center', border:'1px solid rgba(255,255,255,0.1)'}}>
                          <h3 style={{fontSize:'1.5rem', color:'white'}}>{pkg.title}</h3>
                          <div style={{fontSize:'2rem', color:'#f87171', margin:'1rem 0'}}>{pkg.price}</div>
                          <ul style={{listStyle:'none', padding:0, textAlign:'left', color:'#94a3b8', lineHeight:'2'}}>
@@ -802,9 +829,11 @@ const App: React.FC = () => {
             <h2 style={{fontSize:'2rem', color:'white', marginBottom:'2rem'}}>留学资讯中心</h2>
             <div style={{display:'flex', flexDirection:'column', gap:'1.5rem'}}>
                 {NEWS_DATA.map((news, i) => (
-                    <div key={i} style={{background:'rgba(255,255,255,0.03)', padding:'1.5rem', borderRadius:'12px', borderLeft:'4px solid #f87171'}}>
+                    <div key={i} className="fade-in" style={{animationDelay:`${i*0.1}s`, background:'rgba(255,255,255,0.03)', padding:'1.5rem', borderRadius:'12px', borderLeft:'4px solid #f87171', cursor:'pointer', transition:'background 0.2s'}}
+                         onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                         onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}>
                         <div style={{display:'flex', justifyContent:'space-between', marginBottom:'0.5rem'}}>
-                            <h3 style={{color:'white', margin:0}}>{news.title}</h3>
+                            <h3 style={{color:'white', margin:0, fontSize:'1.2rem'}}>{news.title}</h3>
                             <span style={{color:'#94a3b8', fontSize:'0.9rem'}}>{news.date}</span>
                         </div>
                         <p style={{color:'#cbd5e1', margin:0}}>{news.desc}</p>
@@ -816,7 +845,7 @@ const App: React.FC = () => {
         {/* ABOUT PAGE */}
         <div style={styles.contentPanel(currentView === 'about')}>
             <h2 style={{fontSize:'2rem', color:'white', marginBottom:'2rem'}}>关于 TaoLi Edu</h2>
-            <div style={{color:'#cbd5e1', lineHeight:'1.8', fontSize:'1.1rem'}}>
+            <div style={{color:'#cbd5e1', lineHeight:'1.8', fontSize:'1.1rem'}} className="fade-in">
                 <p style={{marginBottom:'1.5rem'}}>
                     TaoLi Edu (桃李教育) 致力于为中国学生提供最专业的全球留学规划服务。"桃李不言，下自成蹊"，我们相信优质的教育规划能让学生自然绽放光彩。
                 </p>
@@ -824,19 +853,24 @@ const App: React.FC = () => {
                     我们拥有由常青藤名校校友组成的顾问团队，结合独家AI大数据系统，为您提供精准的选校定位和极具竞争力的文书指导。
                 </p>
                 <div style={{display:'flex', gap:'2rem', marginTop:'3rem'}}>
-                    <div>
+                    <div style={{textAlign:'center'}}>
                         <div style={{fontSize:'2rem', color:'#f87171', fontWeight:'bold'}}>10+</div>
                         <div style={{fontSize:'0.9rem'}}>年行业经验</div>
                     </div>
-                    <div>
+                    <div style={{textAlign:'center'}}>
                         <div style={{fontSize:'2rem', color:'#f87171', fontWeight:'bold'}}>5000+</div>
                         <div style={{fontSize:'0.9rem'}}>成功案例</div>
                     </div>
-                    <div>
+                    <div style={{textAlign:'center'}}>
                         <div style={{fontSize:'2rem', color:'#f87171', fontWeight:'bold'}}>98%</div>
                         <div style={{fontSize:'0.9rem'}}>名校录取率</div>
                     </div>
                 </div>
+                
+                <h3 style={{marginTop:'3rem', color:'white'}}>联系我们</h3>
+                <p>📍 北京市海淀区中关村大街1号</p>
+                <p>📞 400-888-6666</p>
+                <p>📧 contact@taoli-edu.com</p>
             </div>
         </div>
 
@@ -855,10 +889,11 @@ const App: React.FC = () => {
                 display:'flex', justifyContent:'center', alignItems:'center', zIndex:200,
                 pointerEvents: 'auto'
             }} onClick={() => setViewSchool(null)}>
-                <div style={{
+                <div className="fade-in" style={{
                     background:'#1e293b', width:'500px', padding:'2rem', borderRadius:'24px', border:'1px solid #334155',
-                    position:'relative'
+                    position:'relative', boxShadow:'0 20px 50px rgba(0,0,0,0.5)'
                 }} onClick={e => e.stopPropagation()}>
+                    <button onClick={() => setViewSchool(null)} style={{position:'absolute', top:'1rem', right:'1rem', background:'none', border:'none', color:'#94a3b8', fontSize:'1.5rem', cursor:'pointer'}}>✕</button>
                     <div style={{fontSize:'4rem', textAlign:'center'}}>{viewSchool.icon}</div>
                     <h2 style={{color:'white', textAlign:'center', margin:'1rem 0'}}>{viewSchool.name}</h2>
                     <p style={{color:'#94a3b8', textAlign:'center', marginBottom:'2rem'}}>{viewSchool.desc}</p>
@@ -886,38 +921,47 @@ const App: React.FC = () => {
             </div>
         )}
 
-        {/* Comparison Modal - FIXED POINTER EVENTS */}
+        {/* Comparison Modal - FIXED CLOSE BUTTON */}
         {compareMode && (
             <div style={{
-                position: 'absolute', inset:0, background:'rgba(0,0,0,0.9)', zIndex:200, padding:'5%',
-                pointerEvents: 'auto', // Fix: Allow clicks on this layer
+                position: 'absolute', inset:0, background:'rgba(15, 23, 42, 0.98)', zIndex:200, padding:'5%',
+                pointerEvents: 'auto', 
                 display: 'flex', flexDirection: 'column',
                 overflow: 'auto'
             }}>
-                <div style={{display:'flex', justifyContent:'space-between', marginBottom:'2rem', alignItems:'center'}}>
+                <div className="fade-in" style={{display:'flex', justifyContent:'space-between', marginBottom:'2rem', alignItems:'center', position:'relative'}}>
                     <h2 style={{color:'white', fontSize:'2rem', margin:0}}>院校对比</h2>
-                    <button style={{...styles.btnOutline, padding:'10px 24px', fontSize:'1rem', background:'rgba(255,255,255,0.1)'}} onClick={() => setCompareMode(false)}>关闭对比</button>
+                    {/* Big explicit close button top right */}
+                    <button 
+                        style={{
+                            background:'rgba(255,255,255,0.1)', border:'none', color:'white', width:'40px', height:'40px', 
+                            borderRadius:'50%', fontSize:'1.5rem', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center'
+                        }} 
+                        onClick={() => setCompareMode(false)}
+                    >
+                        ✕
+                    </button>
                 </div>
-                <div style={{display:'grid', gridTemplateColumns:`repeat(${selectedSchools.length}, 1fr)`, gap:'2rem', flex:1}}>
+                <div className="fade-in" style={{display:'grid', gridTemplateColumns:`repeat(${Math.max(1, selectedSchools.length)}, 1fr)`, gap:'2rem', flex:1}}>
                     {getComparisonSchools().map(s => (
-                        <div key={s.id} style={{background:'#1e293b', padding:'2rem', borderRadius:'16px', borderTop:'4px solid #f87171', display:'flex', flexDirection:'column'}}>
+                        <div key={s.id} style={{background:'#1e293b', padding:'2rem', borderRadius:'16px', borderTop:'4px solid #f87171', display:'flex', flexDirection:'column', boxShadow:'0 10px 30px rgba(0,0,0,0.3)'}}>
                             <div style={{fontSize:'3rem', textAlign:'center'}}>{s.icon}</div>
                             <h3 style={{color:'white', textAlign:'center'}}>{s.name}</h3>
                             <div style={{marginTop:'2rem', display:'flex', flexDirection:'column', gap:'1rem', flex:1}}>
                                 <div style={{borderBottom:'1px solid #334155', paddingBottom:'0.5rem'}}>
-                                    <span style={{color:'#94a3b8'}}>Location</span><br/>
+                                    <span style={{color:'#94a3b8', fontSize:'0.8rem'}}>Location</span><br/>
                                     <span style={{color:'white'}}>{s.location}</span>
                                 </div>
                                 <div style={{borderBottom:'1px solid #334155', paddingBottom:'0.5rem'}}>
-                                    <span style={{color:'#94a3b8'}}>Ranking</span><br/>
+                                    <span style={{color:'#94a3b8', fontSize:'0.8rem'}}>Ranking</span><br/>
                                     <span style={{color:'#f87171', fontWeight:'bold'}}>{s.ranking}</span>
                                 </div>
                                 <div style={{borderBottom:'1px solid #334155', paddingBottom:'0.5rem'}}>
-                                    <span style={{color:'#94a3b8'}}>Tuition</span><br/>
+                                    <span style={{color:'#94a3b8', fontSize:'0.8rem'}}>Tuition</span><br/>
                                     <span style={{color:'white'}}>{s.tuition}</span>
                                 </div>
                                 <div style={{borderBottom:'1px solid #334155', paddingBottom:'0.5rem'}}>
-                                    <span style={{color:'#94a3b8'}}>Highlights</span><br/>
+                                    <span style={{color:'#94a3b8', fontSize:'0.8rem'}}>Highlights</span><br/>
                                     <div style={{display:'flex', gap:'5px', flexWrap:'wrap', marginTop:'5px'}}>
                                         {s.tags.map(t => <span key={t} style={styles.tag}>{t}</span>)}
                                     </div>
